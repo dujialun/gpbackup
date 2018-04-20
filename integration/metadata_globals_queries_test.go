@@ -10,6 +10,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"os"
 )
 
 var _ = Describe("backup integration tests", func() {
@@ -303,6 +304,29 @@ CREATEEXTTABLE (protocol='gphdfs', type='writable')`)
 				}
 			}
 			Fail("Tablespace 'test_tablespace' was not created")
+		})
+		It("returns a tablespace with segment locations", func() {
+			var expectedTablespace backup.Tablespace
+			testutils.SkipIfBefore6(connection)
+			os.Mkdir("/tmp/test_dir1", os.FileMode(0777))
+			defer os.Remove("/tmp/test_dir1")
+			os.Mkdir("/tmp/test_dir2", os.FileMode(0777))
+			defer os.Remove("/tmp/test_dir2")
+			testhelper.AssertQueryRuns(connection, "CREATE TABLESPACE test_tablespace LOCATION '/tmp/test_dir' OPTIONS (content1 '/tmp/test_dir1', content2 '/tmp/test_dir2')")
+			expectedTablespace = backup.Tablespace{Oid: 0, Tablespace: "test_tablespace", FileLocation: "'/tmp/test_dir'", SegmentLocation: []backup.SegmentTablespace{{Tablespace: "content1", FileLocation: "/tmp/test_dir1"}, {Tablespace: "content2", FileLocation: "/tmp/test_dir2"}}}
+
+			defer testhelper.AssertQueryRuns(connection, "DROP TABLESPACE test_tablespace")
+
+			resultTablespaces := backup.GetTablespaces(connection)
+
+			for _, tablespace := range resultTablespaces {
+				if tablespace.Tablespace == "test_tablespace" {
+					structmatcher.ExpectStructsToMatchExcluding(&expectedTablespace, &tablespace, "Oid")
+					return
+				}
+			}
+			Fail("Tablespace 'test_tablespace' was not created")
+
 		})
 	})
 })

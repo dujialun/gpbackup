@@ -303,5 +303,13 @@ REVOKE ALL ON TABLESPACE test_tablespace FROM PUBLIC;
 REVOKE ALL ON TABLESPACE test_tablespace FROM testrole;
 GRANT ALL ON TABLESPACE test_tablespace TO testrole;`)
 		})
+		It("prints a tablespace with per-segment tablespaces", func() {
+			expectedTablespace := backup.Tablespace{Oid: 1, Tablespace: "test_tablespace", FileLocation: "test_filespace", SegmentLocation: []backup.SegmentTablespace{{Tablespace: "content1", FileLocation: "'test_filespace1'"}, {Tablespace: "content2", FileLocation: "'test_filespace2'"}}}
+			emptyMetadataMap := backup.MetadataMap{}
+			backup.PrintCreateTablespaceStatements(backupfile, toc, []backup.Tablespace{expectedTablespace}, emptyMetadataMap)
+			testutils.ExpectEntry(toc.GlobalEntries, 0, "", "", "test_tablespace", "TABLESPACE")
+			testutils.AssertBufferContents(toc.GlobalEntries, buffer, `CREATE TABLESPACE test_tablespace LOCATION test_filespace
+	OPTIONS (content1 'test_filespace1', content2 'test_filespace2');`)
+		})
 	})
 })

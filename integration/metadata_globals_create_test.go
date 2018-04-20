@@ -277,7 +277,13 @@ var _ = Describe("backup integration create statement tests", func() {
 		})
 	})
 	Describe("PrintCreateTablespaceStatements", func() {
-		expectedTablespace := backup.Tablespace{Oid: 1, Tablespace: "test_tablespace"}
+		var expectedTablespace backup.Tablespace{}
+		if connection.Version.AtLeast("6"){
+			expectedTablespace = backup.Tablespace{Oid: 1, Tablespace: "test_tablespace", SegmentLocation:[]backup.SegmentTablespace{{Tablespace:"segment1", FileLocation:"'/tmp/test_dir'"}, {Tablespace:"segment2", FileLocation:"'/tmp/test_dir'"}}}
+		} else{
+			expectedTablespace = backup.Tablespace{Oid: 1, Tablespace: "test_tablespace"}
+		}
+		
 		BeforeEach(func() {
 			if connection.Version.Before("6") {
 				expectedTablespace.FileLocation = "test_dir"
