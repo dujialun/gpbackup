@@ -1,6 +1,8 @@
 package integration
 
 import (
+	"fmt"
+
 	"github.com/greenplum-db/gp-common-go-libs/structmatcher"
 	"github.com/greenplum-db/gp-common-go-libs/testhelper"
 	"github.com/greenplum-db/gpbackup/backup"
@@ -928,6 +930,9 @@ LANGUAGE SQL`)
 				structmatcher.ExpectStructsToMatchExcluding(&expectedMetadata, &resultMetadata, "Oid")
 			})
 			It("returns a slice of default metadata for a resource queue", func() {
+				if connection.Version.AtLeast("6") {
+					Skip("Commenting on resource queues is currently broken in 6")
+				}
 				resultMetadataMap := backup.GetCommentsForObjectType(connection, backup.TYPE_RESOURCEQUEUE)
 				numResQueues := len(resultMetadataMap)
 
@@ -995,7 +1000,7 @@ LANGUAGE SQL`)
 				resultMetadata := resultMetadataMap[oid]
 				structmatcher.ExpectStructsToMatch(&templateMetadata, &resultMetadata)
 			})
-			It("returns a slice of default metadata for an extension", func() {
+			FIt("returns a slice of default metadata for an extension", func() {
 				testutils.SkipIfBefore5(connection)
 				extensionMetadataMap := testutils.DefaultMetadataMap("EXTENSION", false, false, true)
 				extensionMetadata := extensionMetadataMap[1]
@@ -1007,6 +1012,7 @@ LANGUAGE SQL`)
 				oid := testutils.OidFromObjectName(connection, "", "plperl", backup.TYPE_EXTENSION)
 				resultMetadataMap := backup.GetCommentsForObjectType(connection, backup.TYPE_EXTENSION)
 
+				fmt.Println(resultMetadataMap)
 				Expect(len(resultMetadataMap)).To(Equal(1))
 				resultMetadata := resultMetadataMap[oid]
 				structmatcher.ExpectStructsToMatch(&extensionMetadata, &resultMetadata)
